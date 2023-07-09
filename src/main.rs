@@ -18,10 +18,16 @@ fn write_guestbook(message: &str) -> io::Result<()> {
         .append(true)
         .open(GUESTBOOK)?;
 
-    let time = chrono::Local::now().format("%Y/%m/%d %H:%M JST");
+    let time = chrono::Utc::now()
+        // hardcoding timezone bc for some reason Local isn't working on my server
+        // may be a chroot problem.. not entirely sure
+        .with_timezone(&chrono_tz::Japan)
+        .format("%-d %B, %Y at %H:%M JST")
+        .to_string()
+        .to_lowercase();
 
     let formatted = format!(
-        "{}\n> ({time})\n\n",
+        "{}\n> -- {time}\n\n",
         message
             .split("\n")
             .filter(|line| !line.is_empty()) // remove double-newlines bc it looks confusing in some clients
