@@ -9,6 +9,8 @@ const GUESTBOOK: &str = "../guestbook.gmi";
 
 const PROMPT: &str = "enter message (please sign your name!)";
 const WRITE_ERROR: &str = "error writing to guestbook";
+const DECODE_ERROR: &str = "error decoding message";
+const UNSAFE_MESSAGE: &str = "your message contains unsafe characters";
 
 fn write_guestbook(message: &str) -> io::Result<()> {
     let mut file = OpenOptions::new()
@@ -16,43 +18,51 @@ fn write_guestbook(message: &str) -> io::Result<()> {
         .append(true)
         .open(GUESTBOOK)?;
 
-    file.write_all(format!("{}\n", message).as_bytes())?;
+    let time = chrono::Local::now().format("%Y/%m/%d %H:%M JST");
 
-    gemini::redirect(GUESTBOOK);
+    let formatted = format!(
+        "> ({time})\n{}\n",
+        message
+            .split("\n")
+            .map(|line| format!("> {line}\n"))
+            .collect::<String>()
+    );
+
+    file.write_all(formatted.as_bytes())?;
 
     Ok(())
 }
 
-fn main() {
-    if let Ok(message) = env::var("QUERY_STRING") {
-        let message = match ue::decode(&message) {
-            Ok(message) => message,
-            Err(_) => {
-                gemini::server_error(WRITE_ERROR);
-                return;
-            }
-        };
-
-        if message.is_empty() {
-            gemini::input(PROMPT);
-        }
-
-        for line in message.split('\n') {
-            if line.trim().starts_with("```") {
-                continue;
-            }
-
-            // lazy patch
-            // i really want to remove all ctrl/non-printable chars
-            if line.contains('\r') {
-                continue;
-            }
-
-            if write_guestbook(line).is_err() {
-                gemini::server_error(WRITE_ERROR);
-            }
-        }
+/// very lazy sanitation check
+fn is_safe(message: &str) -> bool {
+    if message.contains("\r") {
+        false
     } else {
+        true
+    }
+}
+
+fn main() {
+    let query = match env::var("QUERY_STRING") {
+        Ok(q) => q,
+        Err(_) => gemini::input(PROMPT),
+    };
+
+    let message = match ue::decode(&query) {
+        Ok(m) => m,
+        Err(_) => gemini::server_error(DECODE_ERROR),
+    };
+
+    if message.is_empty() {
         gemini::input(PROMPT);
+    }
+
+    if !is_safe(&message) {
+        gemini::bad_input(UNSAFE_MESSAGE);
+    }
+
+    match write_guestbook(&message) {
+        Ok(_) => gemini::redirect(GUESTBOOK),
+        Err(_) => gemini::server_error(WRITE_ERROR),
     }
 }
