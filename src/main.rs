@@ -12,6 +12,11 @@ const WRITE_ERROR: &str = "error writing to guestbook";
 const DECODE_ERROR: &str = "error decoding message";
 const UNSAFE_MESSAGE: &str = "your message contains unsafe characters";
 
+/// very lazy sanitation check
+fn is_safe(message: &str) -> bool {
+    !message.contains("\r")
+}
+
 fn write_guestbook(message: &str) -> io::Result<()> {
     let mut file = OpenOptions::new()
         .write(true)
@@ -39,15 +44,6 @@ fn write_guestbook(message: &str) -> io::Result<()> {
     file.write_all(formatted.as_bytes())?;
 
     Ok(())
-}
-
-/// very lazy sanitation check
-fn is_safe(message: &str) -> bool {
-    if message.contains("\r") {
-        false
-    } else {
-        true
-    }
 }
 
 fn main() {
