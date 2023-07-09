@@ -21,11 +21,13 @@ fn write_guestbook(message: &str) -> io::Result<()> {
     let time = chrono::Local::now().format("%Y/%m/%d %H:%M JST");
 
     let formatted = format!(
-        "> ({time})\n{}\n",
+        "{}\n> ({time})\n\n",
         message
             .split("\n")
+            .filter(|line| !line.is_empty()) // remove double-newlines bc it looks confusing in some clients
             .map(|line| format!("> {line}\n"))
             .collect::<String>()
+            .trim()
     );
 
     file.write_all(formatted.as_bytes())?;
