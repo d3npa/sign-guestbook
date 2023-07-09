@@ -2,4 +2,3 @@
 
 => /cgi-bin/sign-guestbook sign my guestbook!
 
-```
