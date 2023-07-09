@@ -11,6 +11,7 @@ const PROMPT: &str = "enter message (please sign your name!)";
 const WRITE_ERROR: &str = "error writing to guestbook";
 const DECODE_ERROR: &str = "error decoding message";
 const UNSAFE_MESSAGE: &str = "your message contains unsafe characters";
+const QUERY_NOT_FOUND: &str = "error reading query string environment variable";
 
 /// very lazy sanitation check
 fn is_safe(message: &str) -> bool {
@@ -49,7 +50,7 @@ fn write_guestbook(message: &str) -> io::Result<()> {
 fn main() {
     let query = match env::var("QUERY_STRING") {
         Ok(q) => q,
-        Err(_) => gemini::input(PROMPT),
+        Err(_) => gemini::server_error(QUERY_NOT_FOUND),
     };
 
     let message = match ue::decode(&query) {
