@@ -3,26 +3,12 @@ use std::fs::OpenOptions;
 use std::io::{self, Write};
 use urlencoding as ue;
 
+mod gemini;
+
 const GUESTBOOK: &str = "../guestbook.gmi";
 
-mod response_codes {
-    pub const INPUT: usize = 10;
-    pub const REDIRECT: usize = 30;
-    pub const CGI_ERROR: usize = 42;
-    // pub const BAD_REQUEST: usize = 59;
-}
-
-fn prompt_message() {
-    print!("{} enter message:\r\n", response_codes::INPUT);
-}
-
-// fn bad_input() {
-//     print!("{} blacklisted characters\r\n", response_codes::BAD_REQUEST);
-// }
-
-fn redirect() {
-    print!("{} {}\r\n", response_codes::REDIRECT, GUESTBOOK);
-}
+const PROMPT: &str = "enter message (please sign your name!)";
+const WRITE_ERROR: &str = "error writing to guestbook";
 
 fn write_guestbook(message: &str) -> io::Result<()> {
     let mut file = OpenOptions::new()
@@ -32,16 +18,9 @@ fn write_guestbook(message: &str) -> io::Result<()> {
 
     file.write_all(format!("{}\n", message).as_bytes())?;
 
-    redirect();
+    gemini::redirect(GUESTBOOK);
 
     Ok(())
-}
-
-fn server_error() {
-    print!(
-        "{} error writing to guestbook\r\n",
-        response_codes::CGI_ERROR
-    );
 }
 
 fn main() {
@@ -49,13 +28,13 @@ fn main() {
         let message = match ue::decode(&message) {
             Ok(message) => message,
             Err(_) => {
-                server_error();
+                gemini::server_error(WRITE_ERROR);
                 return;
             }
         };
 
         if message.is_empty() {
-            prompt_message();
+            gemini::input(PROMPT);
         }
 
         for line in message.split('\n') {
@@ -70,10 +49,10 @@ fn main() {
             }
 
             if write_guestbook(line).is_err() {
-                server_error();
+                gemini::server_error(WRITE_ERROR);
             }
         }
     } else {
-        prompt_message();
+        gemini::input(PROMPT);
     }
 }
